@@ -1,0 +1,27 @@
+# strategies.yaml - how Health OS intends to reach its goals.
+#
+# Each item maps to watchtower.startup.models.Strategy.
+# Schema:
+#   id:             required. Stable unique identifier (string).
+#   goal_id:        required. id of the goal this strategy serves (see goals.yaml).
+#   title:          required. Short name for the approach.
+#   description:    optional. Longer explanation of the approach.
+#   status:         optional. One of: proposed, active, paused, validated,
+#                   invalidated, abandoned. Defaults to "proposed".
+#   hypothesis_ids: optional. List of hypothesis ids this strategy depends on.
+#   tags:           optional. List of free-form labels.
+#
+# This file is optional and may be left empty (strategies: []) or deleted.
+# TODO(founder): Replace the EXAMPLE entry below with your real strategies.
+
+strategies:
+  # EXAMPLE - placeholder strategy so the workspace loads. Delete or replace it.
+  - id: example-strategy
+    goal_id: example-goal
+    title: "EXAMPLE: replace with a real strategy"
+    description: >-
+      TODO(founder): Describe how you plan to reach the linked goal. This entry
+      is a placeholder and is not real startup content.
+    status: proposed
+    hypothesis_ids: [example-hypothesis]
+    tags: [example, placeholder]

@@ -58,6 +58,69 @@ uv run watchtower version
 uv run watchtower --help
 ```
 
+### The morning routine
+
+`watchtower morning` loads a local **startup workspace** and prints a founder
+dashboard: goals, hypotheses, a research briefing, and prioritized
+recommendations.
+
+```bash
+uv run watchtower morning            # uses ./startup
+uv run watchtower morning -p path/to/startup
+```
+
+### Initialize your own workspace
+
+A workspace is a directory (default `startup/`) describing your startup's
+current understanding of itself. Watchtower ships a starter workspace in
+[`startup/`](startup) already populated for **Health OS**, where each file
+contains one clearly marked `EXAMPLE` entry and `TODO(founder)` placeholders.
+
+To make it yours:
+
+1. **Edit `vision.md`.** The first `#` heading becomes the startup name and the
+   first paragraph becomes the mission. Replace the `TODO(founder)` text.
+2. **Fill in the YAML files.** Replace each `EXAMPLE` entry with your real
+   content. Every file documents its own schema in comments at the top.
+3. **Run it:** `uv run watchtower morning`.
+
+| File | Holds | Required |
+|------|-------|----------|
+| `vision.md` | Startup name + mission (narrative) | Yes |
+| `goals.yaml` | Outcomes you are trying to reach | No |
+| `strategies.yaml` | Approaches for reaching goals | No |
+| `hypotheses.yaml` | Testable beliefs your strategies rely on | No |
+| `experiments.yaml` | Tests that validate hypotheses | No |
+| `decisions.yaml` | Record of choices made | No |
+
+Only `vision.md` is required. Every YAML file is optional and empty-safe: a
+missing or empty file simply contributes nothing, so you can start with just a
+vision and grow the workspace over time. To start from scratch, either delete a
+file, empty it, or replace its list with `[]` (for example, `goals: []`).
+
+### Enabling live research
+
+Research is powered by **GPT-Researcher**, which is an optional dependency. By
+default it is not installed and the research step degrades gracefully to a
+clearly-labeled placeholder, so `watchtower morning` always works. To enable
+live research:
+
+```bash
+uv sync --extra research      # install GPT-Researcher
+# set the API keys GPT-Researcher needs (e.g. OPENAI_API_KEY, TAVILY_API_KEY) in .env
+```
+
+With the extra installed and keys configured, `GPTResearchService` builds a
+query from your `vision.md`, `goals.yaml`, `strategies.yaml`, and
+`hypotheses.yaml`, and returns structured findings (new evidence, competitor
+updates, scientific papers, market changes, and a confidence score).
+
+The decision step is still an LLM-free placeholder, wired behind an injectable
+interface so it can later be replaced by LangGraph nodes. See
+[ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
+
+
+
 ## Development
 
 ```bash

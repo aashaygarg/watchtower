@@ -1,0 +1,27 @@
+# hypotheses.yaml - the testable beliefs Health OS is betting on.
+#
+# Each item maps to watchtower.startup.models.Hypothesis.
+# Schema:
+#   id:          required. Stable unique identifier (string).
+#   statement:   required. The belief expressed as a falsifiable statement.
+#   strategy_id: optional. id of the strategy this hypothesis supports.
+#   status:      optional. One of: untested, testing, supported, refuted,
+#                inconclusive. Defaults to "untested".
+#   confidence:  optional. Number from 0.0 to 1.0. Defaults to 0.5.
+#   rationale:   optional. Why you believe this, or why it is worth testing.
+#   tags:        optional. List of free-form labels.
+#
+# This file is optional and may be left empty (hypotheses: []) or deleted.
+# TODO(founder): Replace the EXAMPLE entry below with your real hypotheses.
+
+hypotheses:
+  # EXAMPLE - placeholder hypothesis so the workspace loads. Delete or replace it.
+  - id: example-hypothesis
+    statement: "EXAMPLE: replace with a real, falsifiable hypothesis"
+    strategy_id: example-strategy
+    status: untested
+    confidence: 0.5
+    rationale: >-
+      TODO(founder): Explain why this hypothesis matters and why you believe it.
+      This entry is a placeholder and is not real startup content.
+    tags: [example, placeholder]

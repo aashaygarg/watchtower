@@ -15,6 +15,11 @@ dependencies = [
     "rich>=13.7",
 ]
 
+[project.optional-dependencies]
+# Live research via GPT-Researcher. Optional: without it, the research service
+# degrades gracefully to the placeholder. Install with `uv sync --extra research`.
+research = ["gpt-researcher>=0.8"]
+
 [project.scripts]
 watchtower = "watchtower.cli:main"
 
@@ -50,6 +55,10 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Typer relies on function calls in argument defaults; treat them as immutable.
+extend-immutable-calls = ["typer.Option", "typer.Argument", "pathlib.Path"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

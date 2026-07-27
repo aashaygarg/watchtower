@@ -1,0 +1,40 @@
+# decisions.yaml - the record of choices Health OS has made.
+#
+# Each item maps to watchtower.startup.models.Decision.
+# Schema:
+#   id:                 required. Stable unique identifier (string).
+#   title:              required. Short statement of what was decided.
+#   context:            optional. The situation that prompted the decision.
+#   options_considered: optional. List of alternatives that were weighed.
+#   chosen_option:      optional. The option that was selected.
+#   rationale:          optional. Why the chosen option was preferred.
+#   status:             optional. One of: proposed, accepted, rejected,
+#                       superseded, revisited. Defaults to "proposed".
+#   reversible:         optional. true or false. Defaults to true.
+#   goal_id:            optional. id of a related goal.
+#   strategy_id:        optional. id of a related strategy.
+#   hypothesis_id:      optional. id of a related hypothesis.
+#   tags:               optional. List of free-form labels.
+#
+# This file is optional and may be left empty (decisions: []) or deleted.
+# TODO(founder): Replace the EXAMPLE entry below with your real decisions.
+
+decisions:
+  # EXAMPLE - placeholder decision so the workspace loads. Delete or replace it.
+  - id: example-decision
+    title: "EXAMPLE: replace with a real decision"
+    context: >-
+      TODO(founder): Describe the situation that prompted this decision. This
+      entry is a placeholder and is not real startup content.
+    options_considered:
+      - "TODO(founder): option A"
+      - "TODO(founder): option B"
+    chosen_option: "TODO(founder): the option you chose"
+    rationale: >-
+      TODO(founder): Explain why you chose it.
+    status: proposed
+    reversible: true
+    goal_id: example-goal
+    strategy_id: example-strategy
+    hypothesis_id: example-hypothesis
+    tags: [example, placeholder]

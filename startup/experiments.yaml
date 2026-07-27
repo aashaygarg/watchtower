@@ -1,0 +1,28 @@
+# experiments.yaml - the tests Health OS runs to validate hypotheses.
+#
+# Each item maps to watchtower.startup.models.Experiment.
+# Schema:
+#   id:               required. Stable unique identifier (string).
+#   name:             required. Short name for the experiment.
+#   hypothesis_id:    required. id of the hypothesis being tested (see hypotheses.yaml).
+#   description:      optional. What the experiment does and how it is run.
+#   status:           optional. One of: designed, running, completed, cancelled,
+#                     failed. Defaults to "designed".
+#   success_criteria: optional. The observable outcome that counts as success.
+#   tags:             optional. List of free-form labels.
+#
+# This file is optional and may be left empty (experiments: []) or deleted.
+# TODO(founder): Replace the EXAMPLE entry below with your real experiments.
+
+experiments:
+  # EXAMPLE - placeholder experiment so the workspace loads. Delete or replace it.
+  - id: example-experiment
+    name: "EXAMPLE: replace with a real experiment"
+    hypothesis_id: example-hypothesis
+    description: >-
+      TODO(founder): Describe the test you will run to validate the hypothesis.
+      This entry is a placeholder and is not real startup content.
+    status: designed
+    success_criteria: >-
+      TODO(founder): Describe the result that would confirm the hypothesis.
+    tags: [example, placeholder]

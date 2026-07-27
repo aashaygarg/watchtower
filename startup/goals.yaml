@@ -1,0 +1,28 @@
+# goals.yaml - the outcomes Health OS is trying to reach.
+#
+# Each item maps to watchtower.startup.models.Goal.
+# Schema:
+#   id:             required. Stable unique identifier (string).
+#   title:          required. Short statement of the desired outcome.
+#   description:    optional. Longer explanation of the goal.
+#   status:         optional. One of: proposed, active, achieved, blocked, abandoned.
+#                   Defaults to "proposed".
+#   target_metric:  optional. Name of the metric used to judge success.
+#   target_value:   optional. Target value for the metric (quote it as a string).
+#   parent_goal_id: optional. id of a parent goal, for sub-goals.
+#   tags:           optional. List of free-form labels.
+#
+# This file is optional and may be left empty (goals: []) or deleted.
+# TODO(founder): Replace the EXAMPLE entry below with your real goals.
+
+goals:
+  # EXAMPLE - placeholder goal so the workspace loads. Delete or replace it.
+  - id: example-goal
+    title: "EXAMPLE: replace with a real goal"
+    description: >-
+      TODO(founder): Describe an outcome you are trying to reach. This entry is a
+      placeholder and is not real startup content.
+    status: proposed
+    target_metric: TODO_metric_name
+    target_value: "TODO"
+    tags: [example, placeholder]
