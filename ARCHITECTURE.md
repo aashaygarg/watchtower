@@ -41,6 +41,7 @@ flowchart TD
 | Presentation | [watchtower/cli/dashboard.py](watchtower/cli/dashboard.py) | Render a report to the terminal with Rich. |
 | CLI | [watchtower/cli/app.py](watchtower/cli/app.py) | Parse commands, construct dependencies, handle errors. |
 | Cognition | [watchtower/cognition.py](watchtower/cognition.py) | The dialogue engine: one reasoning turn per founder message. |
+| Inquiry | [watchtower/inquiry.py](watchtower/inquiry.py) | Conversational state for a single clarification, so dialogue converges. |
 | Beliefs | [watchtower/beliefs/](watchtower/beliefs) | Watchtower's evolving worldview: conclusions distilled from conversations, stored separately behind `BeliefStore`. |
 | Decisions | [watchtower/decisions/](watchtower/decisions) | What the founder actually chose to do, why, and whether it was right — stored behind `DecisionStore`, independent of beliefs. |
 | Support | [watchtower/config.py](watchtower/config.py), [watchtower/llm.py](watchtower/llm.py) | YAML config and a provider-agnostic LLM factory. |
@@ -75,6 +76,21 @@ overwritten. A decision can later be `complete`d and `review`ed: the review
 compares original assumptions and beliefs against current beliefs and observed
 evidence to improve future judgment. The subsystem is independent of embeddings,
 retrieval, and agents.
+
+### The inquiry engine
+
+Reasoning alone does not converge: the dialogue engine used to ask a
+clarification, receive an answer, and — treating every turn as a fresh reasoning
+pass — ask the same question again in different words. The fix is to model
+clarifications as first-class **conversational state**. An `Inquiry`
+([inquiry.py](watchtower/inquiry.py)) records the question, the uncertainty it
+resolves, and its status (`open` / `answered` / `abandoned`) with the founder's
+answer. Each turn, `think()` first decides whether the founder's latest message
+answers the open inquiry; if so it is marked `answered`, its answer is fed back
+into the reasoning, and it is never asked again. An unanswered inquiry may be
+rephrased at most once (`_MAX_ASKS`) before it is `abandoned` and the engine is
+forced to reason with what it has. Inquiries are neither beliefs nor decisions:
+they live only within a conversation and are never persisted.
 
 ---
 

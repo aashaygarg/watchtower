@@ -21,7 +21,7 @@ from watchtower.decisions import (
     record_review,
     review_decision,
 )
-from watchtower.llm import Message
+from watchtower.domain.messages import Message
 
 runner = CliRunner()
 

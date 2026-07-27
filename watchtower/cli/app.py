@@ -9,7 +9,6 @@ import typer
 from rich.console import Console
 
 from watchtower import __version__
-from watchtower.agents.decision import PlaceholderDecisionService
 from watchtower.beliefs import (
     JsonBeliefStore,
     apply_updates,
@@ -19,7 +18,6 @@ from watchtower.beliefs import (
 )
 from watchtower.cli.beliefs_view import render_belief_updates, render_beliefs
 from watchtower.cli.conversation import render_thinking
-from watchtower.cli.dashboard import render_morning
 from watchtower.cli.decisions_view import render_captured, render_review, render_timeline
 from watchtower.cognition import think
 from watchtower.config import load_config
@@ -31,10 +29,8 @@ from watchtower.decisions import (
     record_review,
     review_decision,
 )
-from watchtower.graphs.morning import MorningRoutine
 from watchtower.llm import LLMUnavailableError, build_llm
 from watchtower.startup.workspace import WorkspaceError, load_workspace
-from watchtower.tools.research import GPTResearchService
 
 app = typer.Typer(
     name="watchtower",
@@ -87,6 +83,7 @@ def chat(
     store = _belief_store(path)
     beliefs = store.all()
     history: list[str] = []
+    inquiries = ()
     while True:
         try:
             message = console.input("\n[bold cyan]you[/bold cyan] > ").strip()
@@ -95,8 +92,16 @@ def chat(
         if message.lower() in {"exit", "quit", ""}:
             break
         relevant = format_for_prompt(select_relevant(beliefs, message))
-        result = think(message, workspace=workspace, llm=llm, history=history, beliefs=relevant)
+        result = think(
+            message,
+            workspace=workspace,
+            llm=llm,
+            history=history,
+            beliefs=relevant,
+            inquiries=inquiries,
+        )
         render_thinking(result, console)
+        inquiries = result.inquiries
         history.append(f"You: {message}")
         spoken = result.recommendation or result.current_thinking or result.understanding or ""
         if result.question:
@@ -192,30 +197,3 @@ def review(
     result = review_decision(decision, _belief_store(path).all(), observed, llm)
     record_review(decision_store, result)
     render_review(result, decision, console)
-
-
-@app.command()
-def morning(
-    path: Annotated[
-        Path,
-        typer.Option("--path", "-p", help="Path to the startup workspace directory."),
-    ] = Path("startup"),
-) -> None:
-    """Run the morning routine and print the founder dashboard."""
-    routine = MorningRoutine(
-        research=GPTResearchService(),
-        decision=PlaceholderDecisionService(),
-    )
-    try:
-        report = routine.run(path)
-    except WorkspaceError as exc:
-        console.print(f"[red]Could not load startup workspace:[/red] {exc}")
-        raise typer.Exit(code=1) from exc
-    render_morning(report, console)
-
-
-@app.command()
-def run() -> None:
-    """Run the Watchtower agent loop (not implemented yet)."""
-    console.print("[yellow]Not implemented yet.[/yellow]")
-    raise typer.Exit(code=1)

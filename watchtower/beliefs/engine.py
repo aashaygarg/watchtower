@@ -15,7 +15,8 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from watchtower.beliefs.models import (
+from watchtower.beliefs.store import BeliefStore
+from watchtower.domain.beliefs import (
     Belief,
     BeliefAction,
     BeliefCategory,
@@ -23,8 +24,8 @@ from watchtower.beliefs.models import (
     BeliefStatus,
     BeliefUpdate,
 )
-from watchtower.beliefs.store import BeliefStore
-from watchtower.llm import LLM, system, user
+from watchtower.domain.messages import system, user
+from watchtower.ports.oracle import Oracle
 
 _LIVE_STATUSES = (BeliefStatus.ACTIVE, BeliefStatus.WEAKENING)
 _CONFIDENCE_ORDER = (BeliefConfidence.LOW, BeliefConfidence.MEDIUM, BeliefConfidence.HIGH)
@@ -129,7 +130,7 @@ _UPDATE_SYSTEM = (
 
 
 def update_beliefs(
-    conversation: Sequence[str], beliefs: Sequence[Belief], llm: LLM
+    conversation: Sequence[str], beliefs: Sequence[Belief], llm: Oracle
 ) -> tuple[BeliefUpdate, ...]:
     """Reason about how ``conversation`` should change ``beliefs``.
 

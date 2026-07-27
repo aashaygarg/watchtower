@@ -6,8 +6,6 @@ import importlib.util
 from pathlib import Path
 
 import pytest
-from watchtower.agents.decision import PlaceholderDecisionService
-from watchtower.graphs.morning import MorningRoutine
 from watchtower.startup.workspace import StartupWorkspace, load_workspace
 from watchtower.tools.research import (
     GPTResearcherRunner,
@@ -144,21 +142,6 @@ def test_gpt_service_degrades_on_unexpected_error(tmp_path: Path) -> None:
 
     # Falls back to the default placeholder even on an unexpected error.
     assert briefing.is_placeholder is True
-
-
-def test_gpt_service_in_morning_routine(tmp_path: Path) -> None:
-    _workspace(tmp_path)
-    routine = MorningRoutine(
-        research=GPTResearchService(runner=_StubRunner(_STRUCTURED)),
-        decision=PlaceholderDecisionService(),
-    )
-
-    report = routine.run(tmp_path)
-
-    assert report.research.is_placeholder is False
-    assert report.research.competitor_updates
-    # The decision service should not nudge for live research when it is real.
-    assert all("Wire in live research" not in rec.title for rec in report.recommendations)
 
 
 def test_real_runner_unavailable_without_package(tmp_path: Path) -> None:

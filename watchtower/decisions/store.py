@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
-from watchtower.decisions.models import (
+from watchtower.domain.decisions import (
     Decision,
     DecisionEvent,
     DecisionEventKind,

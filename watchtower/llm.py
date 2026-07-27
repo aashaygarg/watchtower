@@ -14,8 +14,10 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Sequence
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any
+
+from watchtower.domain.messages import Message
+from watchtower.ports.oracle import Oracle
 
 if TYPE_CHECKING:
     from watchtower.config import LLMConfig
@@ -27,36 +29,6 @@ class LLMError(RuntimeError):
 
 class LLMUnavailableError(LLMError):
     """Raised when no LLM can be constructed (missing key, package, or provider)."""
-
-
-@dataclass(frozen=True, slots=True)
-class Message:
-    """A single chat message."""
-
-    role: str
-    content: str
-
-
-def system(content: str) -> Message:
-    """Build a system message."""
-    return Message(role="system", content=content)
-
-
-def user(content: str) -> Message:
-    """Build a user message."""
-    return Message(role="user", content=content)
-
-
-class LLM(Protocol):
-    """Port for a chat language model."""
-
-    def complete(self, messages: Sequence[Message]) -> str:
-        """Return the model's free-text completion for ``messages``."""
-        ...
-
-    def complete_json(self, messages: Sequence[Message]) -> dict[str, Any]:
-        """Return the model's JSON-object completion for ``messages``."""
-        ...
 
 
 class OpenAICompatibleLLM:
@@ -221,7 +193,7 @@ _DEFAULT_KEY_ENV = {
 }
 
 
-def build_llm(config: LLMConfig) -> LLM:
+def build_llm(config: LLMConfig) -> Oracle:
     """Construct an :class:`LLM` from configuration.
 
     The provider is chosen by ``config.provider``. Nothing above this function

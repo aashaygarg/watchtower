@@ -21,7 +21,7 @@ from watchtower.beliefs import (
     update_beliefs,
 )
 from watchtower.cli import app
-from watchtower.llm import Message
+from watchtower.domain.messages import Message
 
 runner = CliRunner()
 

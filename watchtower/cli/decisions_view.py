@@ -10,8 +10,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from watchtower.decisions.models import Decision, DecisionReview, DecisionStatus
 from watchtower.decisions.store import DecisionStore
+from watchtower.domain.decisions import Decision, DecisionReview, DecisionStatus
 
 _ACTIVE = (DecisionStatus.PROPOSED, DecisionStatus.ACCEPTED)
 

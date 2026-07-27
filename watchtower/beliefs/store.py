@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
-from watchtower.beliefs.models import (
+from watchtower.domain.beliefs import (
     Belief,
     BeliefAction,
     BeliefCategory,

@@ -14,16 +14,17 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from watchtower.beliefs.models import Belief
-from watchtower.decisions.models import (
+from watchtower.decisions.store import DecisionStore
+from watchtower.domain.beliefs import Belief
+from watchtower.domain.decisions import (
     Decision,
     DecisionEvent,
     DecisionEventKind,
     DecisionReview,
     DecisionStatus,
 )
-from watchtower.decisions.store import DecisionStore
-from watchtower.llm import LLM, system, user
+from watchtower.domain.messages import system, user
+from watchtower.ports.oracle import Oracle
 
 # --------------------------------------------------------------------------- #
 # Explicit capture
@@ -49,7 +50,7 @@ _CAPTURE_SYSTEM = (
 def capture_decisions(
     conversation: Sequence[str],
     beliefs: Sequence[Belief],
-    llm: LLM,
+    llm: Oracle,
     *,
     now: datetime | None = None,
 ) -> tuple[Decision, ...]:
@@ -162,7 +163,7 @@ def review_decision(
     decision: Decision,
     beliefs: Sequence[Belief],
     observed_evidence: Sequence[str],
-    llm: LLM,
+    llm: Oracle,
     *,
     now: datetime | None = None,
 ) -> DecisionReview:

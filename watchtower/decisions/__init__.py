@@ -13,14 +13,14 @@ from watchtower.decisions.engine import (
     record_review,
     review_decision,
 )
-from watchtower.decisions.models import (
+from watchtower.decisions.store import DecisionStore, JsonDecisionStore
+from watchtower.domain.decisions import (
     Decision,
     DecisionEvent,
     DecisionEventKind,
     DecisionReview,
     DecisionStatus,
 )
-from watchtower.decisions.store import DecisionStore, JsonDecisionStore
 
 __all__ = [
     "Decision",

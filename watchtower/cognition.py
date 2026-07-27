@@ -16,108 +16,107 @@ outside projects, facts, or research.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import replace
+from datetime import datetime
 from typing import Any
+from uuid import uuid4
 
-from watchtower.llm import LLM, system, user
+from watchtower.domain.inquiry import Inquiry, InquiryStatus
+from watchtower.domain.judgment import ConfidenceReason, Experiment, ThinkingResult
+from watchtower.domain.messages import system, user
+from watchtower.ports.oracle import Oracle
 from watchtower.startup.workspace import StartupWorkspace
 
 _CONFIDENCE_LEVELS = ("Low", "Medium", "High")
-
-
-@dataclass(frozen=True, slots=True)
-class ConfidenceReason:
-    """One justification behind the confidence level.
-
-    Attributes:
-        supports: ``True`` if the reason raises confidence, ``False`` if it lowers it.
-        text: The reason itself.
-    """
-
-    supports: bool
-    text: str
-
-
-@dataclass(frozen=True, slots=True)
-class Experiment:
-    """A concrete, time-boxed experiment that produces evidence.
-
-    Attributes:
-        goal: What the founder would learn.
-        duration: How long it should take.
-        success: The observable outcome that counts as success.
-        failure: The observable outcome that counts as failure.
-    """
-
-    goal: str
-    duration: str = ""
-    success: str = ""
-    failure: str = ""
-
-
-@dataclass(frozen=True, slots=True)
-class ThinkingResult:
-    """One turn of dialogue with the founder.
-
-    Every turn reasons out loud. Early turns typically lead with a challenged
-    assumption and a single question; later turns firm up into a recommendation.
-
-    Attributes:
-        problem: The founder's latest message.
-        understanding: How Watchtower currently reads what is being decided.
-        challenged_assumption: The single strongest assumption, challenged.
-        current_thinking: The current lean, held with honest uncertainty.
-        biggest_uncertainty: The one thing Watchtower is least sure about.
-        question: At most one question - the highest-value one (empty if none).
-        recommendation: A recommendation, once the conversation supports one.
-        confidence_level: ``Low``, ``Medium``, or ``High`` - justified, not numeric.
-        confidence_reasons: The reasons for and against, behind the level.
-        counterargument: The single strongest argument against the recommendation.
-        unknowns: What remains genuinely uncertain.
-        what_would_change_my_mind: Observations that would overturn the answer.
-        evidence: The evidence actually available (never fabricated).
-        experiments: One or two concrete experiments to run next.
-    """
-
-    problem: str
-    understanding: str = ""
-    challenged_assumption: str = ""
-    current_thinking: str = ""
-    biggest_uncertainty: str = ""
-    question: str = ""
-    recommendation: str = ""
-    confidence_level: str = ""
-    confidence_reasons: tuple[ConfidenceReason, ...] = ()
-    counterargument: str = ""
-    unknowns: tuple[str, ...] = ()
-    what_would_change_my_mind: tuple[str, ...] = ()
-    evidence: tuple[str, ...] = ()
-    experiments: tuple[Experiment, ...] = ()
+# An inquiry may be asked once and rephrased at most once before it is abandoned.
+_MAX_ASKS = 2
 
 
 def think(
     problem: str,
     *,
     workspace: StartupWorkspace,
-    llm: LLM,
+    llm: Oracle,
     history: Sequence[str] = (),
     beliefs: Sequence[str] = (),
+    inquiries: Sequence[Inquiry] = (),
 ) -> ThinkingResult:
     """Take one turn of dialogue about ``problem``.
 
     Reasoning is grounded only in ``problem``, the conversation ``history``, the
     explicitly loaded ``workspace`` context, and ``beliefs`` (Watchtower's prior
     understanding, which it may disagree with) - nothing else.
+
+    ``inquiries`` carries the conversation's clarification state so the dialogue
+    converges: an answered inquiry is never asked again, and an unanswered one is
+    rephrased at most once before it is abandoned. The updated state is returned
+    on :attr:`ThinkingResult.inquiries`.
     """
     context = _context_summary(workspace)
+    open_inquiry = _first_open(inquiries)
+    answered = tuple(item for item in inquiries if item.status is InquiryStatus.ANSWERED)
+    can_reask = open_inquiry is None or open_inquiry.times_asked < _MAX_ASKS
+
     prompt = (
         "Company context (background - use only if it is relevant to the question):\n"
         f"{context}\n\n"
         f"{_beliefs_block(beliefs)}"
+        f"{_open_inquiry_block(open_inquiry, can_reask=can_reask)}"
+        f"{_answered_block(answered)}"
         f"{_history_block(history)}"
         f"Founder:\n{problem}"
     )
     data = llm.complete_json([system(_DIALOGUE_SYSTEM), user(prompt)])
+
+    updated = list(inquiries)
+    resolved_id: str | None = None
+    now = datetime.now()
+
+    # 1. Resolve the open inquiry if the founder's latest message answered it.
+    if open_inquiry is not None and bool(data.get("resolves_open_inquiry")):
+        _replace_inquiry(
+            updated,
+            replace(
+                open_inquiry,
+                status=InquiryStatus.ANSWERED,
+                founder_answer=str(data.get("founder_answer", "")).strip() or problem,
+                resolution_summary=str(data.get("resolution_summary", "")).strip(),
+            ),
+        )
+        resolved_id = open_inquiry.id
+        open_inquiry = None
+
+    # 2. Handle a question, enforcing convergence.
+    question = str(data.get("question", "")).strip()
+    uncertainty = str(data.get("biggest_uncertainty", "")).strip()
+    if question:
+        if open_inquiry is not None:
+            # The open inquiry is still unresolved: this is a rephrase attempt.
+            if open_inquiry.times_asked < _MAX_ASKS:
+                _replace_inquiry(
+                    updated,
+                    replace(
+                        open_inquiry,
+                        original_question=question,
+                        times_asked=open_inquiry.times_asked + 1,
+                        asked_at=now,
+                    ),
+                )
+            else:
+                # Rephrase budget spent: abandon it and stop asking. Never loop.
+                _replace_inquiry(updated, replace(open_inquiry, status=InquiryStatus.ABANDONED))
+                question = ""
+        else:
+            updated.append(
+                Inquiry(
+                    id=f"inquiry-{uuid4().hex[:8]}",
+                    original_question=question,
+                    uncertainty_being_resolved=uncertainty or question,
+                    asked_at=now,
+                    status=InquiryStatus.OPEN,
+                    times_asked=1,
+                )
+            )
 
     recommendation = str(data.get("recommendation", "")).strip()
     return ThinkingResult(
@@ -125,8 +124,8 @@ def think(
         understanding=str(data.get("understanding", "")).strip(),
         challenged_assumption=str(data.get("challenged_assumption", "")).strip(),
         current_thinking=str(data.get("current_thinking", "")).strip(),
-        biggest_uncertainty=str(data.get("biggest_uncertainty", "")).strip(),
-        question=str(data.get("question", "")).strip(),
+        biggest_uncertainty=uncertainty,
+        question=question,
         recommendation=recommendation,
         confidence_level=_confidence_level(data.get("confidence_level")) if recommendation else "",
         confidence_reasons=_parse_reasons(data.get("confidence_reasons")) if recommendation else (),
@@ -135,6 +134,8 @@ def think(
         what_would_change_my_mind=_str_tuple(data.get("what_would_change_my_mind")),
         evidence=_str_tuple(data.get("evidence")),
         experiments=_parse_experiments(data.get("experiments")) if recommendation else (),
+        inquiries=tuple(updated),
+        resolved_inquiry_id=resolved_id,
     )
 
 
@@ -151,6 +152,12 @@ _DIALOGUE_SYSTEM = (
     "provided company context. Never introduce companies, projects, people, products, metrics, "
     "or facts that are not present in the conversation or that context. Use the company context "
     "only when it is relevant to what the founder is actually asking.\n\n"
+    "Converge. When you are waiting on an earlier question you asked, FIRST decide whether the "
+    "founder's latest message answers it. If it does, set resolves_open_inquiry to true, put "
+    "their answer in founder_answer, incorporate it, and do NOT ask that question again. If it "
+    "is genuinely unanswered you may rephrase it once, but never repeat the same question. Never "
+    "re-ask an uncertainty that has already been resolved; use its answer to move forward toward "
+    "a recommendation.\n\n"
     "Every turn:\n"
     "1. State your current understanding of what the founder is really deciding, in a sentence.\n"
     "2. Challenge the single strongest assumption hidden in what they said, and say plainly why "
@@ -169,6 +176,8 @@ _DIALOGUE_SYSTEM = (
     "good question and forcing a premature recommendation, ask the question. Respond as a JSON "
     "object with keys: understanding (string), challenged_assumption (string), current_thinking "
     "(string), biggest_uncertainty (string), question (string; at most one, empty if none), "
+    "resolves_open_inquiry (boolean; true only when the founder's latest message answers the "
+    "open inquiry), founder_answer (string; their answer to it), resolution_summary (string), "
     "recommendation (string; empty if not ready), confidence_level (one of Low, Medium, High, "
     "or empty), confidence_reasons (array of objects with a boolean 'supports' and a string "
     "'text'), counterargument (string), unknowns (array of strings), what_would_change_my_mind "
@@ -212,6 +221,46 @@ def _beliefs_block(beliefs: Sequence[str]) -> str:
         "Relevant beliefs (your prior understanding, not facts - you may disagree with them):\n"
         f"{body}\n\n"
     )
+
+
+def _first_open(inquiries: Sequence[Inquiry]) -> Inquiry | None:
+    for inquiry in inquiries:
+        if inquiry.status is InquiryStatus.OPEN:
+            return inquiry
+    return None
+
+
+def _replace_inquiry(items: list[Inquiry], inquiry: Inquiry) -> None:
+    for index, existing in enumerate(items):
+        if existing.id == inquiry.id:
+            items[index] = inquiry
+            return
+
+
+def _open_inquiry_block(open_inquiry: Inquiry | None, *, can_reask: bool) -> str:
+    if open_inquiry is None:
+        return ""
+    text = (
+        f'You are waiting on an earlier question you asked: "{open_inquiry.original_question}" '
+        f'(to resolve: "{open_inquiry.uncertainty_being_resolved}"). First decide whether the '
+        "founder's latest message answers it.\n"
+    )
+    if not can_reask:
+        text += (
+            "You have already pressed this question. Do not ask it again - reason with what you "
+            "have and give your best recommendation.\n"
+        )
+    return text + "\n"
+
+
+def _answered_block(answered: Sequence[Inquiry]) -> str:
+    if not answered:
+        return ""
+    body = "\n".join(
+        f'- "{inquiry.uncertainty_being_resolved}": {inquiry.founder_answer}'
+        for inquiry in answered
+    )
+    return "Already resolved (never ask about these again; use the answers):\n" + body + "\n\n"
 
 
 def _str_tuple(value: Any) -> tuple[str, ...]:

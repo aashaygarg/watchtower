@@ -11,9 +11,11 @@ from typing import Any
 import pytest
 from rich.console import Console
 from watchtower.cli.conversation import render_thinking
-from watchtower.cognition import ConfidenceReason, Experiment, ThinkingResult, think
+from watchtower.cognition import think
 from watchtower.config import LLMConfig
-from watchtower.llm import LLMUnavailableError, Message, build_llm
+from watchtower.domain.judgment import ConfidenceReason, Experiment, ThinkingResult
+from watchtower.domain.messages import Message
+from watchtower.llm import LLMUnavailableError, build_llm
 from watchtower.startup.models import Startup, StartupId
 from watchtower.startup.workspace import StartupWorkspace
 

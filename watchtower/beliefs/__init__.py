@@ -12,7 +12,8 @@ from watchtower.beliefs.engine import (
     select_relevant,
     update_beliefs,
 )
-from watchtower.beliefs.models import (
+from watchtower.beliefs.store import BeliefStore, JsonBeliefStore
+from watchtower.domain.beliefs import (
     Belief,
     BeliefAction,
     BeliefCategory,
@@ -20,7 +21,6 @@ from watchtower.beliefs.models import (
     BeliefStatus,
     BeliefUpdate,
 )
-from watchtower.beliefs.store import BeliefStore, JsonBeliefStore
 
 __all__ = [
     "Belief",

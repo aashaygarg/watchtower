@@ -15,7 +15,7 @@ from rich.console import Console, Group, RenderableType
 from rich.panel import Panel
 from rich.text import Text
 
-from watchtower.cognition import Experiment, ThinkingResult
+from watchtower.domain.judgment import Experiment, ThinkingResult
 
 
 def render_thinking(result: ThinkingResult, console: Console) -> None:
