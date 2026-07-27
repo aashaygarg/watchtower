@@ -49,7 +49,7 @@ def chat(
         raise typer.Exit(code=1) from exc
 
     try:
-        llm = build_llm(load_config().llm)
+        llm = build_llm(load_config(search_from=path).llm)
     except LLMUnavailableError as exc:
         console.print(f"[yellow]Watchtower can't reason yet:[/yellow] {exc}")
         raise typer.Exit(code=1) from exc
