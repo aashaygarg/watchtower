@@ -40,11 +40,41 @@ flowchart TD
 | Orchestration | [watchtower/graphs/morning.py](watchtower/graphs/morning.py) | Wire loader + services into a routine; return a report. |
 | Presentation | [watchtower/cli/dashboard.py](watchtower/cli/dashboard.py) | Render a report to the terminal with Rich. |
 | CLI | [watchtower/cli/app.py](watchtower/cli/app.py) | Parse commands, construct dependencies, handle errors. |
-| Support | [watchtower/config.py](watchtower/config.py), [watchtower/llm.py](watchtower/llm.py) | YAML config and an OpenAI-compatible client factory (not yet wired into `morning`). |
+| Cognition | [watchtower/cognition.py](watchtower/cognition.py) | The dialogue engine: one reasoning turn per founder message. |
+| Beliefs | [watchtower/beliefs/](watchtower/beliefs) | Watchtower's evolving worldview: conclusions distilled from conversations, stored separately behind `BeliefStore`. |
+| Decisions | [watchtower/decisions/](watchtower/decisions) | What the founder actually chose to do, why, and whether it was right — stored behind `DecisionStore`, independent of beliefs. |
+| Support | [watchtower/config.py](watchtower/config.py), [watchtower/llm.py](watchtower/llm.py) | YAML config and a provider-agnostic LLM factory. |
 
 The key invariant: **the domain never imports outward**. LangGraph, an LLM
 client, or a persistence engine can be introduced at the outer layers without
 touching the domain.
+
+### The belief engine
+
+Watchtower does not remember conversations — it remembers **conclusions**. Each
+conversation is evidence; a second reasoning step ([beliefs/engine.py](watchtower/beliefs/engine.py))
+turns that evidence into worldview updates (create / strengthen / weaken /
+supersede / disprove / no-change, each with a rationale). Beliefs live behind a
+storage-agnostic `BeliefStore` (JSON today; SQLite/Postgres later) and are never
+silently overwritten — superseding links old to new, and every change is logged.
+At the start of a turn, only the *relevant* beliefs (lexical overlap, no
+embeddings) are injected as prior understanding the model may disagree with. The
+feature is deliberately independent of embeddings, vector search, retrieval,
+agents, and long-term conversation memory.
+
+### The decision engine
+
+Beliefs describe what Watchtower *thinks*; decisions describe what the founder
+*chose to do* — a separate concept. A decision is captured
+([decisions/engine.py](watchtower/decisions/engine.py)) only when the founder
+**explicitly commits** to an action; it is never inferred from a recommendation.
+Decisions link the beliefs that supported them (by id) but **never mutate
+beliefs**, so the belief engine is untouched. They live behind a `DecisionStore`
+with an append-only event log and stored reviews — prior reasoning is never
+overwritten. A decision can later be `complete`d and `review`ed: the review
+compares original assumptions and beliefs against current beliefs and observed
+evidence to improve future judgment. The subsystem is independent of embeddings,
+retrieval, and agents.
 
 ---
 

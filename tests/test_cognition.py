@@ -1,18 +1,21 @@
-"""Tests for the core thinking capability and the LLM seam."""
+"""Tests for the dialogue engine and the LLM seam."""
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Sequence
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
 import pytest
-from watchtower.cognition import ThinkingResult, think
+from rich.console import Console
+from watchtower.cli.conversation import render_thinking
+from watchtower.cognition import ConfidenceReason, Experiment, ThinkingResult, think
 from watchtower.config import LLMConfig
 from watchtower.llm import LLMUnavailableError, Message, build_llm
 from watchtower.startup.models import Startup, StartupId
 from watchtower.startup.workspace import StartupWorkspace
-from watchtower.tools.research import ResearchBriefing, ResearchFinding
 
 
 def _workspace() -> StartupWorkspace:
@@ -24,81 +27,170 @@ def _workspace() -> StartupWorkspace:
 
 
 class FakeLLM:
-    """Routes JSON responses by the system prompt; models evidence sufficiency."""
+    """Returns one canned dialogue turn and records the messages it received."""
 
-    def __init__(self, *, sufficient_without_research: bool) -> None:
-        self.sufficient = sufficient_without_research
-        self.redteam_calls = 0
+    def __init__(self, response: dict[str, Any]) -> None:
+        self.response = response
+        self.calls = 0
+        self.messages: list[Message] = []
 
     def complete(self, messages: Sequence[Message]) -> str:
         return "ok"
 
     def complete_json(self, messages: Sequence[Message]) -> dict[str, Any]:
-        instruction = messages[0].content
-        prompt = messages[1].content
-        if "competing hypotheses" in instruction:
-            return {"restatement": "r", "success_criteria": "s", "hypotheses": ["H1", "H2"]}
-        if "red team" in instruction:
-            self.redteam_calls += 1
-            has_evidence = "(none yet)" not in prompt
-            sufficient = self.sufficient or has_evidence
-            return {
-                "red_team": ["H1 assumes demand that is unproven"],
-                "internal_evidence": ["internal reasoning point"],
-                "open_questions": [] if sufficient else ["Is there real demand for X?"],
-                "evidence_sufficient": sufficient,
-            }
-        if "final recommendation" in instruction:
-            return {
-                "recommendation": "Pursue H1",
-                "confidence": 0.8,
-                "unknowns": ["pricing tolerance"],
-                "what_would_change_my_mind": ["evidence of low willingness to pay"],
-            }
-        return {}
-
-
-class FakeResearch:
-    def __init__(self) -> None:
-        self.calls = 0
-
-    def investigate(self, workspace: StartupWorkspace) -> ResearchBriefing:
         self.calls += 1
-        return ResearchBriefing(
-            findings=(ResearchFinding(topic="demand", summary="external finding on demand"),),
-            is_placeholder=False,
-        )
+        self.messages = list(messages)
+        return self.response
 
 
-def test_think_stops_when_evidence_sufficient() -> None:
-    llm = FakeLLM(sufficient_without_research=True)
-    research = FakeResearch()
+_DIALOGUE_TURN = {
+    "understanding": "You want to decide whether to build memory next.",
+    "challenged_assumption": "I think you're assuming memory is the bottleneck.",
+    "current_thinking": "My current intuition is that validation matters more.",
+    "biggest_uncertainty": "Whether any user has actually asked for memory.",
+    "question": "Has a single user actually asked for memory?",
+    "recommendation": "",
+}
 
-    result = think("Should we build X?", workspace=_workspace(), llm=llm, research=research)
+_RECOMMENDATION_TURN = {
+    "understanding": "You have your answer now.",
+    "challenged_assumption": "You assumed users want memory.",
+    "current_thinking": "Given no user asked, validation comes first.",
+    "biggest_uncertainty": "",
+    "question": "",
+    "recommendation": "Do not build memory yet; validate demand first.",
+    "confidence_level": "Medium",
+    "confidence_reasons": [
+        {"supports": True, "text": "You have a working prototype."},
+        {"supports": False, "text": "No user has asked for memory."},
+    ],
+    "counterargument": "A power user might churn without memory.",
+    "unknowns": ["retention drivers"],
+    "what_would_change_my_mind": ["several users request memory"],
+    "evidence": ["No user has requested memory."],
+    "experiments": [
+        {
+            "goal": "Learn whether founders voluntarily return.",
+            "duration": "3 days",
+            "success": "5 founders complete two conversations.",
+            "failure": "Nobody returns.",
+        }
+    ],
+}
 
-    assert isinstance(result, ThinkingResult)
-    assert research.calls == 0  # minimum thinking: no external research needed
-    assert result.used_external_research is False
-    assert result.recommendation == "Pursue H1"
-    assert result.confidence == 0.8
-    assert result.hypotheses == ("H1", "H2")
-    assert result.red_team  # red team is first-class
-    assert result.unknowns == ("pricing tolerance",)
-    assert result.what_would_change_my_mind == ("evidence of low willingness to pay",)
+
+def test_reasons_immediately_with_one_question() -> None:
+    llm = FakeLLM(_DIALOGUE_TURN)
+
+    result = think("I think memory is the next thing to build.", workspace=_workspace(), llm=llm)
+
+    assert llm.calls == 1  # one turn, not an interview
+    assert result.understanding
+    assert result.challenged_assumption  # challenge is present up front
+    assert result.current_thinking  # it exposes its lean instead of only asking
+    assert result.question == "Has a single user actually asked for memory?"
+    assert result.recommendation == ""  # it engages without committing yet
+    assert not hasattr(result, "needs_clarification")  # no clarification gate
+    assert not hasattr(result, "clarifying_questions")
 
 
-def test_think_escalates_when_evidence_insufficient() -> None:
-    llm = FakeLLM(sufficient_without_research=False)
-    research = FakeResearch()
+def test_recommends_when_conversation_supports_it() -> None:
+    llm = FakeLLM(_RECOMMENDATION_TURN)
 
-    result = think("Should we build X?", workspace=_workspace(), llm=llm, research=research)
+    result = think("So what should we do?", workspace=_workspace(), llm=llm)
 
-    # The evidence-sufficiency gate (not confidence) triggered external research.
-    assert research.calls == 1
-    assert result.used_external_research is True
-    assert llm.redteam_calls == 2  # re-assessed after gathering evidence
-    assert any("external finding" in item for item in result.evidence)
-    assert result.confidence == 0.8  # confidence is the outcome, still produced
+    assert result.recommendation.startswith("Do not build memory")
+    assert result.confidence_level == "Medium"
+    supports = [r.supports for r in result.confidence_reasons]
+    assert True in supports and False in supports
+    assert result.experiments and result.experiments[0].duration == "3 days"
+    assert result.counterargument
+
+
+def test_confidence_and_experiments_gated_on_recommendation() -> None:
+    # A dialogue turn with no recommendation must not surface confidence/experiments,
+    # even if the model returned them.
+    turn = {**_DIALOGUE_TURN, "confidence_level": "High", "experiments": [{"goal": "x"}]}
+    llm = FakeLLM(turn)
+
+    result = think("thinking out loud", workspace=_workspace(), llm=llm)
+
+    assert result.recommendation == ""
+    assert result.confidence_level == ""
+    assert result.confidence_reasons == ()
+    assert result.experiments == ()
+
+
+def test_reasoning_uses_only_conversation_and_context() -> None:
+    # Contamination guard: think() takes no external research capability, and the
+    # only inputs to the model are the founder message, the history, and context.
+    assert "research" not in inspect.signature(think).parameters
+
+    llm = FakeLLM(_DIALOGUE_TURN)
+    think("Should I quit my job?", workspace=_workspace(), llm=llm, history=("You: earlier",))
+
+    system_prompt = llm.messages[0].content
+    user_prompt = llm.messages[1].content
+    assert "Ground your reasoning ONLY" in system_prompt
+    assert "Never introduce companies, projects" in system_prompt
+    assert "Should I quit my job?" in user_prompt
+    assert "You: earlier" in user_prompt
+
+
+def test_beliefs_are_injected_as_priors() -> None:
+    llm = FakeLLM(_DIALOGUE_TURN)
+
+    think(
+        "Should we build memory?",
+        workspace=_workspace(),
+        llm=llm,
+        beliefs=("[medium] Memory is the next bottleneck",),
+    )
+
+    user_prompt = llm.messages[1].content
+    assert "Relevant beliefs" in user_prompt
+    assert "Memory is the next bottleneck" in user_prompt
+    assert "you may disagree" in user_prompt  # beliefs are priors, not facts
+
+
+def test_no_beliefs_means_no_beliefs_block() -> None:
+    llm = FakeLLM(_DIALOGUE_TURN)
+
+    think("Should we build memory?", workspace=_workspace(), llm=llm)
+
+    assert "Relevant beliefs" not in llm.messages[1].content
+
+
+def test_render_dialogue_turn_smoke() -> None:
+    console = Console(file=StringIO())
+
+    render_thinking(think("q", workspace=_workspace(), llm=FakeLLM(_DIALOGUE_TURN)), console)
+
+    output = console.file.getvalue()
+    assert "Has a single user actually asked for memory?" in output
+
+
+def test_render_recommendation_smoke() -> None:
+    console = Console(file=StringIO())
+    result = ThinkingResult(
+        problem="p",
+        understanding="You want X.",
+        recommendation="Do X",
+        confidence_level="Medium",
+        confidence_reasons=(
+            ConfidenceReason(supports=True, text="prototype"),
+            ConfidenceReason(supports=False, text="no validation"),
+        ),
+        counterargument="Demand may not exist",
+        experiments=(Experiment(goal="g", duration="3 days", success="s", failure="f"),),
+    )
+
+    render_thinking(result, console)
+
+    output = console.file.getvalue()
+    assert "Do X" in output
+    assert "Medium" in output
+    assert "Experiments" in output
 
 
 def test_build_llm_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:

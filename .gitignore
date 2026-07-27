@@ -18,6 +18,9 @@ uv.lock
 .ruff_cache/
 .mypy_cache/
 
+# Watchtower local state (beliefs, etc.)
+.watchtower/
+
 # OS / editor
 .DS_Store
 .idea/
