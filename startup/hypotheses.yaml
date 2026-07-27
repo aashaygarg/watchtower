@@ -15,13 +15,36 @@
 # TODO(founder): Replace the EXAMPLE entry below with your real hypotheses.
 
 hypotheses:
-  # EXAMPLE - placeholder hypothesis so the workspace loads. Delete or replace it.
-  - id: example-hypothesis
-    statement: "EXAMPLE: replace with a real, falsifiable hypothesis"
-    strategy_id: example-strategy
+  - id: bio-age-interest
+    statement: >
+      Biological Age generates significantly higher user interest than generic
+      health tracking.
+    strategy_id: biological-age-wedge
+    status: testing
+    confidence: 0.65
+    rationale: >
+      Biological Age is simple, emotionally engaging, and easy to understand.
+    tags:
+      - acquisition
+
+  - id: bio-age-shareability
+    statement: >
+      Users are willing to share their Biological Age results with others.
+    strategy_id: biological-age-wedge
     status: untested
-    confidence: 0.5
-    rationale: >-
-      TODO(founder): Explain why this hypothesis matters and why you believe it.
-      This entry is a placeholder and is not real startup content.
-    tags: [example, placeholder]
+    confidence: 0.50
+    rationale: >
+      Social sharing could become a low-cost acquisition channel.
+    tags:
+      - virality
+
+  - id: personalized-insights
+    statement: >
+      Users return weekly when provided with personalized AI-generated health insights.
+    strategy_id: personalized-ai
+    status: untested
+    confidence: 0.35
+    rationale: >
+      Continuous value should drive long-term engagement.
+    tags:
+      - retention

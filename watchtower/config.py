@@ -21,11 +21,17 @@ DEFAULT_CONFIG_PATH = Path("watchtower.yaml")
 
 @dataclass(slots=True)
 class LLMConfig:
-    """Settings for the OpenAI-compatible LLM interface."""
+    """Settings for the LLM interface.
 
+    ``provider`` selects the implementation (openai, ollama, anthropic, gemini);
+    everything else is shared. ``api_key_env`` is optional and, when unset,
+    defaults to the conventional variable for the chosen provider.
+    """
+
+    provider: str = "openai"
     model: str = "gpt-4o-mini"
     temperature: float = 0.0
-    api_key_env: str = "OPENAI_API_KEY"
+    api_key_env: str | None = None
     base_url: str | None = None
 
 

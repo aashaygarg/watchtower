@@ -15,13 +15,27 @@
 # TODO(founder): Replace the EXAMPLE entry below with your real strategies.
 
 strategies:
-  # EXAMPLE - placeholder strategy so the workspace loads. Delete or replace it.
-  - id: example-strategy
-    goal_id: example-goal
-    title: "EXAMPLE: replace with a real strategy"
-    description: >-
-      TODO(founder): Describe how you plan to reach the linked goal. This entry
-      is a placeholder and is not real startup content.
+  - id: biological-age-wedge
+    goal_id: validate-initial-wedge
+    title: Enter through Biological Age
+    description: >
+      Use Biological Age as an emotionally engaging entry point that creates curiosity
+      while introducing users to the broader Health OS vision.
+    status: active
+    hypothesis_ids:
+      - bio-age-interest
+      - bio-age-shareability
+    tags:
+      - acquisition
+
+  - id: personalized-ai
+    goal_id: establish-user-retention
+    title: Deliver continuous personalized guidance
+    description: >
+      Build an AI system that continuously analyzes health information and recommends
+      the highest-impact next actions.
     status: proposed
-    hypothesis_ids: [example-hypothesis]
-    tags: [example, placeholder]
+    hypothesis_ids:
+      - personalized-insights
+    tags:
+      - ai

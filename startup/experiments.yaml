@@ -15,14 +15,25 @@
 # TODO(founder): Replace the EXAMPLE entry below with your real experiments.
 
 experiments:
-  # EXAMPLE - placeholder experiment so the workspace loads. Delete or replace it.
-  - id: example-experiment
-    name: "EXAMPLE: replace with a real experiment"
-    hypothesis_id: example-hypothesis
-    description: >-
-      TODO(founder): Describe the test you will run to validate the hypothesis.
-      This entry is a placeholder and is not real startup content.
+  - id: landing-page-test
+    name: Biological Age landing page
+    hypothesis_id: bio-age-interest
+    description: >
+      Launch a landing page focused on Biological Age and measure signup conversion.
     status: designed
-    success_criteria: >-
-      TODO(founder): Describe the result that would confirm the hypothesis.
-    tags: [example, placeholder]
+    success_criteria: >
+      Visitor-to-signup conversion exceeds 15%.
+    tags:
+      - acquisition
+
+  - id: interview-health-users
+    name: User interviews
+    hypothesis_id: personalized-insights
+    description: >
+      Conduct interviews with health-conscious users to understand how they currently
+      manage their health and what guidance they are missing.
+    status: designed
+    success_criteria: >
+      At least 15 interviews consistently identify the need for ongoing personalized guidance.
+    tags:
+      - discovery

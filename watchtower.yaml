@@ -2,11 +2,14 @@
 # Values here are defaults for local runs; secrets belong in .env instead.
 
 llm:
-  # OpenAI-compatible model identifier.
-  model: gpt-4o-mini
+  # Provider: one of openai, ollama, anthropic, gemini.
+  provider: ollama
+  # Model identifier for the chosen provider.
+  model: qwen3-coder:30b
   # Sampling temperature.
   temperature: 0.0
-  # Name of the environment variable that holds the API key.
-  api_key_env: OPENAI_API_KEY
-  # Optional override for the API base URL (leave unset for the default).
-  # base_url: https://api.openai.com/v1
+  # Env var holding the API key. Optional: defaults per provider
+  # (OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY; Ollama needs none).
+  # api_key_env: OPENAI_API_KEY
+  # Optional base URL (an OpenAI-compatible endpoint, or the Ollama host).
+  # base_url: http://localhost:11434

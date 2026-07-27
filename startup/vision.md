@@ -1,23 +1,31 @@
 # Health OS
 
-TODO(founder): Replace this paragraph with a one-sentence mission for Health OS.
-This first paragraph is parsed as the startup's mission and appears at the top of
-every morning briefing. It is a placeholder, not real startup content.
+Build the operating system for human health that continuously understands an individual, identifies what matters most, and helps them live healthier, longer lives.
 
 ## Vision
 
-TODO(founder): Describe the change you want to create in the world.
+Healthcare today is reactive, fragmented, and difficult to understand. People interact with dozens of disconnected apps, devices, lab reports, and doctors, yet still struggle to answer simple questions:
+
+- How healthy am I?
+- What should I improve next?
+- What will have the biggest impact on my long-term health?
+
+Health OS aims to become the single intelligent interface that continuously understands a person's health, explains what changed, predicts future outcomes, and recommends the highest-impact actions.
 
 ## Why now
 
-TODO(founder): Explain why this is the right moment to build Health OS.
+Artificial intelligence has reached a point where it can synthesize complex health information into personalized guidance. At the same time, wearable devices, diagnostic testing, and digital health records are becoming increasingly accessible.
+
+The missing piece is an intelligent operating system that connects everything together.
 
 ## Who it is for
 
-TODO(founder): Describe the customer you are building for.
+Initially, Health OS is for health-conscious individuals who actively want to improve their long-term health and are willing to measure, learn, and experiment.
+
+Over time, it will evolve into the default interface through which anyone understands and manages their health.
 
 ## How this file is used
 
-- The first `#` heading is read as the startup **name** (currently "Health OS").
-- The first paragraph after it is read as the **mission**.
-- Everything else is free-form narrative for your own reference and is not parsed.
+- The first `#` heading is read as the startup **name**.
+- The first paragraph is read as the startup **mission**.
+- The remaining sections provide founder context for future reasoning.

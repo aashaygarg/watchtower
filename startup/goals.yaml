@@ -16,13 +16,34 @@
 # TODO(founder): Replace the EXAMPLE entry below with your real goals.
 
 goals:
-  # EXAMPLE - placeholder goal so the workspace loads. Delete or replace it.
-  - id: example-goal
-    title: "EXAMPLE: replace with a real goal"
-    description: >-
-      TODO(founder): Describe an outcome you are trying to reach. This entry is a
-      placeholder and is not real startup content.
+  - id: validate-initial-wedge
+    title: Validate the first compelling entry point for Health OS
+    description: >
+      Identify the first feature or workflow that users consistently find valuable
+      enough to begin using Health OS.
+    status: active
+    target_metric: Weekly active users
+    target_value: "100"
+    tags:
+      - mvp
+      - validation
+
+  - id: establish-user-retention
+    title: Build a product users return to every week
+    description: >
+      Demonstrate that Health OS creates recurring value rather than one-time curiosity.
     status: proposed
-    target_metric: TODO_metric_name
-    target_value: "TODO"
-    tags: [example, placeholder]
+    target_metric: Week 4 retention
+    target_value: "30%"
+    tags:
+      - retention
+
+  - id: validate-monetization
+    title: Demonstrate willingness to pay
+    description: >
+      Validate that users are willing to pay for continuous personalized health guidance.
+    status: proposed
+    target_metric: Paid conversion
+    target_value: "10%"
+    tags:
+      - revenue

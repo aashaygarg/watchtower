@@ -20,21 +20,23 @@
 # TODO(founder): Replace the EXAMPLE entry below with your real decisions.
 
 decisions:
-  # EXAMPLE - placeholder decision so the workspace loads. Delete or replace it.
-  - id: example-decision
-    title: "EXAMPLE: replace with a real decision"
-    context: >-
-      TODO(founder): Describe the situation that prompted this decision. This
-      entry is a placeholder and is not real startup content.
+  - id: initial-product-direction
+    title: Use Biological Age as the initial product entry point
+    context: >
+      Health OS requires a simple, compelling way to introduce users to a broader
+      long-term vision.
     options_considered:
-      - "TODO(founder): option A"
-      - "TODO(founder): option B"
-    chosen_option: "TODO(founder): the option you chose"
-    rationale: >-
-      TODO(founder): Explain why you chose it.
-    status: proposed
+      - Nutrition tracking
+      - Workout planning
+      - Biological Age
+    chosen_option: Biological Age
+    rationale: >
+      Biological Age is differentiated, emotionally engaging, and naturally leads
+      into the broader Health OS platform.
+    status: accepted
     reversible: true
-    goal_id: example-goal
-    strategy_id: example-strategy
-    hypothesis_id: example-hypothesis
-    tags: [example, placeholder]
+    goal_id: validate-initial-wedge
+    strategy_id: biological-age-wedge
+    tags:
+      - mvp
+      - strategy

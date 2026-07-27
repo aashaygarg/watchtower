@@ -19,6 +19,11 @@ dependencies = [
 # Live research via GPT-Researcher. Optional: without it, the research service
 # degrades gracefully to the placeholder. Install with `uv sync --extra research`.
 research = ["gpt-researcher>=0.8"]
+# LLM providers. The OpenAI SDK ships in the core dependencies; these are only
+# needed for the corresponding provider (config.llm.provider).
+ollama = ["ollama>=0.3"]
+anthropic = ["anthropic>=0.39"]
+gemini = ["google-genai>=0.3"]
 
 [project.scripts]
 watchtower = "watchtower.cli:main"
