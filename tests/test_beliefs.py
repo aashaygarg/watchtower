@@ -8,20 +8,24 @@ from pathlib import Path
 from typing import Any
 
 from typer.testing import CliRunner
-from watchtower.beliefs import (
+from watchtower.adapters.persistence import JsonBeliefStore
+from watchtower.domain.beliefs import (
     Belief,
     BeliefAction,
     BeliefCategory,
     BeliefConfidence,
     BeliefStatus,
-    JsonBeliefStore,
+    BeliefUpdate,
+)
+from watchtower.domain.messages import Message
+from watchtower.interface import app
+from watchtower.kernel.worldview import (
     apply_updates,
     format_for_prompt,
     select_relevant,
     update_beliefs,
 )
-from watchtower.cli import app
-from watchtower.domain.messages import Message
+from watchtower.kernel.worldview.consolidation import ConsolidationAction, consolidate
 
 runner = CliRunner()
 
@@ -193,3 +197,158 @@ def test_beliefs_command_lists_current_beliefs(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "Retention is the real risk" in result.stdout
+
+
+def test_disprove_of_high_belief_by_low_evidence_is_downgraded_to_weaken(tmp_path: Path) -> None:
+    store = JsonBeliefStore(tmp_path / "beliefs.json")
+    store.upsert(_belief(id="b1", confidence=BeliefConfidence.HIGH, status=BeliefStatus.ACTIVE))
+
+    applied = apply_updates(
+        store,
+        [
+            BeliefUpdate(
+                action=BeliefAction.DISPROVE,
+                belief_id="b1",
+                confidence=BeliefConfidence.LOW,
+                evidence=("one weak counter-signal",),
+            )
+        ],
+    )
+
+    assert store.get("b1").status is BeliefStatus.WEAKENING  # never destroyed outright
+    assert applied[0].action is BeliefAction.WEAKEN  # the logged change reflects the downgrade
+
+
+def test_supersede_of_high_belief_by_low_evidence_creates_no_replacement(tmp_path: Path) -> None:
+    store = JsonBeliefStore(tmp_path / "beliefs.json")
+    store.upsert(_belief(id="b1", confidence=BeliefConfidence.HIGH))
+    before = len(store.all())
+
+    apply_updates(
+        store,
+        [
+            BeliefUpdate(
+                action=BeliefAction.SUPERSEDE,
+                belief_id="b1",
+                title="A shinier replacement",
+                description="...",
+                confidence=BeliefConfidence.LOW,
+                evidence=("weak hunch",),
+            )
+        ],
+    )
+
+    assert len(store.all()) == before  # no replacement belief was spawned
+    weakened = store.get("b1")
+    assert weakened.status is BeliefStatus.WEAKENING
+    assert weakened.superseded_by is None
+
+
+def test_disprove_of_high_belief_by_high_evidence_still_disproves(tmp_path: Path) -> None:
+    store = JsonBeliefStore(tmp_path / "beliefs.json")
+    store.upsert(_belief(id="b1", confidence=BeliefConfidence.HIGH))
+
+    apply_updates(
+        store,
+        [
+            BeliefUpdate(
+                action=BeliefAction.DISPROVE,
+                belief_id="b1",
+                confidence=BeliefConfidence.HIGH,
+                evidence=("a strong, direct contradiction",),
+            )
+        ],
+    )
+
+    assert store.get("b1").status is BeliefStatus.DISPROVEN  # strong evidence still lands
+
+
+def test_disprove_of_medium_belief_by_low_evidence_still_disproves(tmp_path: Path) -> None:
+    store = JsonBeliefStore(tmp_path / "beliefs.json")
+    store.upsert(_belief(id="b1", confidence=BeliefConfidence.MEDIUM))
+
+    apply_updates(
+        store,
+        [
+            BeliefUpdate(
+                action=BeliefAction.DISPROVE,
+                belief_id="b1",
+                confidence=BeliefConfidence.LOW,
+                evidence=("weak",),
+            )
+        ],
+    )
+
+    assert store.get("b1").status is BeliefStatus.DISPROVEN  # only HIGH beliefs are protected
+
+
+def test_consolidate_skips_an_empty_candidate() -> None:
+    assert consolidate("", "", []).action is ConsolidationAction.SKIP
+
+
+def test_consolidate_creates_when_nothing_is_similar() -> None:
+    memory = _belief(id="b1", title="Memory is the next bottleneck")
+    decision = consolidate("Founders will pay for pricing", "", [memory])
+    assert decision.action is ConsolidationAction.CREATE
+    assert decision.target_id is None
+
+
+def test_consolidate_merges_a_near_duplicate() -> None:
+    memory = _belief(id="b1", title="Memory is the next bottleneck")
+    decision = consolidate("Memory is the next bottleneck", "", [memory])
+    assert decision.action is ConsolidationAction.MERGE
+    assert decision.target_id == "b1"
+
+
+def test_create_of_a_duplicate_merges_instead_of_duplicating(tmp_path: Path) -> None:
+    store = JsonBeliefStore(tmp_path / "beliefs.json")
+    store.upsert(
+        _belief(id="b1", title="Memory is the next bottleneck", confidence=BeliefConfidence.MEDIUM)
+    )
+
+    applied = apply_updates(
+        store,
+        [
+            BeliefUpdate(
+                action=BeliefAction.CREATE,
+                title="Memory is the next bottleneck",
+                confidence=BeliefConfidence.HIGH,
+                evidence=("users keep asking for memory",),
+            )
+        ],
+    )
+
+    assert len(store.all()) == 1  # merged, not duplicated
+    merged = store.get("b1")
+    assert merged.confidence is BeliefConfidence.HIGH
+    assert "users keep asking for memory" in merged.supporting_evidence
+    assert merged.revision == 2
+    assert applied[0].action is BeliefAction.STRENGTHEN
+
+
+def test_create_of_something_new_still_creates(tmp_path: Path) -> None:
+    store = JsonBeliefStore(tmp_path / "beliefs.json")
+    store.upsert(_belief(id="b1", title="Memory is the next bottleneck"))
+
+    apply_updates(
+        store,
+        [
+            BeliefUpdate(
+                action=BeliefAction.CREATE,
+                title="Founders will pay for pricing insights",
+                confidence=BeliefConfidence.MEDIUM,
+                evidence=("three asked about pricing",),
+            )
+        ],
+    )
+
+    assert len(store.all()) == 2  # genuinely new belief created
+
+
+def test_create_with_no_content_is_skipped(tmp_path: Path) -> None:
+    store = JsonBeliefStore(tmp_path / "beliefs.json")
+    applied = apply_updates(
+        store, [BeliefUpdate(action=BeliefAction.CREATE, title="", description="")]
+    )
+    assert applied == ()
+    assert store.all() == ()

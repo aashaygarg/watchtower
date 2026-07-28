@@ -15,7 +15,6 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from watchtower.beliefs.store import BeliefStore
 from watchtower.domain.beliefs import (
     Belief,
     BeliefAction,
@@ -26,6 +25,7 @@ from watchtower.domain.beliefs import (
 )
 from watchtower.domain.messages import system, user
 from watchtower.ports.oracle import Oracle
+from watchtower.ports.stores import BeliefStore
 
 _LIVE_STATUSES = (BeliefStatus.ACTIVE, BeliefStatus.WEAKENING)
 _CONFIDENCE_ORDER = (BeliefConfidence.LOW, BeliefConfidence.MEDIUM, BeliefConfidence.HIGH)

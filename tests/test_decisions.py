@@ -8,20 +8,18 @@ from pathlib import Path
 from typing import Any
 
 from typer.testing import CliRunner
-from watchtower.beliefs import Belief, BeliefCategory, BeliefConfidence
-from watchtower.cli import app
-from watchtower.decisions import (
-    Decision,
-    DecisionEventKind,
-    DecisionStatus,
-    JsonDecisionStore,
+from watchtower.adapters.persistence import JsonDecisionStore
+from watchtower.domain.beliefs import Belief, BeliefCategory, BeliefConfidence
+from watchtower.domain.decisions import Decision, DecisionEventKind, DecisionStatus
+from watchtower.domain.messages import Message
+from watchtower.interface import app
+from watchtower.kernel.ledger import (
     capture_decisions,
     mark_completed,
     record_decisions,
     record_review,
     review_decision,
 )
-from watchtower.domain.messages import Message
 
 runner = CliRunner()
 

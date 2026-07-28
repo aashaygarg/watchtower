@@ -12,14 +12,13 @@ from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-
-from watchtower.beliefs.store import BeliefStore
 from watchtower.domain.beliefs import (
     Belief,
     BeliefAction,
     BeliefStatus,
     BeliefUpdate,
 )
+from watchtower.ports.stores import BeliefStore
 
 _LIVE = (BeliefStatus.ACTIVE, BeliefStatus.WEAKENING)
 _CONFIDENCE_STYLE = {"high": "green", "medium": "yellow", "low": "red"}

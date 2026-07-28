@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from pathlib import Path
 from typing import NewType
 
 from watchtower.startup.enums import (
@@ -303,3 +304,34 @@ class Decision:
     decided_at: datetime | None = None
     tags: tuple[str, ...] = ()
     created_at: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class StartupWorkspace:
+    """The founder's context loaded from a workspace directory.
+
+    This is a pure value object: the founder's living context assembled into
+    immutable data. It carries no file I/O or YAML and depends only on the other
+    pure models, so the kernel may reason over it without reaching outward. The
+    file-backed loader that produces one lives in
+    :mod:`watchtower.startup.workspace`.
+
+    Attributes:
+        root: The directory the workspace was loaded from.
+        startup: The :class:`Startup` synthesized from ``vision.md``.
+        vision: The full, unmodified text of ``vision.md``.
+        goals: The goals parsed from ``goals.yaml``.
+        strategies: The strategies parsed from ``strategies.yaml``.
+        hypotheses: The hypotheses parsed from ``hypotheses.yaml``.
+        experiments: The experiments parsed from ``experiments.yaml``.
+        decisions: The decisions parsed from ``decisions.yaml``.
+    """
+
+    root: Path
+    startup: Startup
+    vision: str
+    goals: tuple[Goal, ...] = ()
+    strategies: tuple[Strategy, ...] = ()
+    hypotheses: tuple[Hypothesis, ...] = ()
+    experiments: tuple[Experiment, ...] = ()
+    decisions: tuple[Decision, ...] = ()

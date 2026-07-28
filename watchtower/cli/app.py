@@ -7,29 +7,26 @@ from typing import Annotated
 
 import typer
 from rich.console import Console
-
 from watchtower import __version__
-from watchtower.beliefs import (
-    JsonBeliefStore,
-    apply_updates,
-    format_for_prompt,
-    select_relevant,
-    update_beliefs,
-)
+from watchtower.bootstrap import LLMUnavailableError, build_context, build_oracle_for
 from watchtower.cli.beliefs_view import render_belief_updates, render_beliefs
 from watchtower.cli.conversation import render_thinking
 from watchtower.cli.decisions_view import render_captured, render_review, render_timeline
-from watchtower.cognition import think
-from watchtower.config import load_config
-from watchtower.decisions import (
-    JsonDecisionStore,
+from watchtower.kernel.ledger import (
     capture_decisions,
     mark_completed,
     record_decisions,
     record_review,
     review_decision,
 )
-from watchtower.llm import LLMUnavailableError, build_llm
+from watchtower.kernel.reasoning import think
+from watchtower.kernel.worldview import (
+    apply_updates,
+    format_for_prompt,
+    select_relevant,
+    update_beliefs,
+)
+from watchtower.ports.stores import BeliefStore, DecisionStore
 from watchtower.startup.workspace import WorkspaceError, load_workspace
 
 app = typer.Typer(
@@ -41,12 +38,12 @@ app = typer.Typer(
 console = Console()
 
 
-def _belief_store(path: Path) -> JsonBeliefStore:
-    return JsonBeliefStore(path / ".watchtower" / "beliefs.json")
+def _belief_store(path: Path) -> BeliefStore:
+    return build_context(path).belief_store
 
 
-def _decision_store(path: Path) -> JsonDecisionStore:
-    return JsonDecisionStore(path / ".watchtower" / "decisions.json")
+def _decision_store(path: Path) -> DecisionStore:
+    return build_context(path).decision_store
 
 
 @app.command()
@@ -70,7 +67,7 @@ def chat(
         raise typer.Exit(code=1) from exc
 
     try:
-        llm = build_llm(load_config(search_from=path).llm)
+        llm = build_oracle_for(path)
     except LLMUnavailableError as exc:
         console.print(f"[yellow]Watchtower can't reason yet:[/yellow] {exc}")
         raise typer.Exit(code=1) from exc
@@ -175,7 +172,7 @@ def review(
         raise typer.Exit(code=1)
 
     try:
-        llm = build_llm(load_config(search_from=path).llm)
+        llm = build_oracle_for(path)
     except LLMUnavailableError as exc:
         console.print(f"[yellow]Watchtower can't reason yet:[/yellow] {exc}")
         raise typer.Exit(code=1) from exc

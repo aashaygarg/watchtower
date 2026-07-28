@@ -12,11 +12,10 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from watchtower.cognition import think
 from watchtower.domain.inquiry import InquiryStatus
 from watchtower.domain.messages import Message
-from watchtower.startup.models import Startup, StartupId
-from watchtower.startup.workspace import StartupWorkspace
+from watchtower.kernel.reasoning import think
+from watchtower.startup.models import Startup, StartupId, StartupWorkspace
 
 
 def _workspace() -> StartupWorkspace:

@@ -1,6 +1,6 @@
 """Enable ``python -m watchtower``."""
 
-from watchtower.cli import main
+from watchtower.interface import main
 
 if __name__ == "__main__":
     main()

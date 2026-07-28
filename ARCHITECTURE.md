@@ -20,35 +20,59 @@ point **inward** toward a pure domain that knows nothing about frameworks, I/O,
 or LLMs. Outer layers depend on inner layers, never the reverse.
 
 ```mermaid
-flowchart TD
-    CLI["CLI (Typer)\nwatchtower/cli/app.py"] --> Routine["Orchestration\nwatchtower/graphs/morning.py"]
-    CLI --> Dashboard["Presentation (Rich)\nwatchtower/cli/dashboard.py"]
-    Routine --> Loader["Workspace loader\nwatchtower/startup/workspace.py"]
-    Routine --> Research["ResearchService (port)\nwatchtower/tools/research.py"]
-    Routine --> Decision["DecisionService (port)\nwatchtower/agents/decision.py"]
-    Loader --> Domain["Domain model\nwatchtower/startup/models.py + enums.py"]
-    Research --> Domain
-    Decision --> Domain
-    Dashboard --> Routine
+flowchart LR
+    interface["interface/ (Typer + Rich)"] --> session["session/ (orchestration)"]
+    session --> kernel["kernel/ (reasoning IP)"]
+    session --> adapters["adapters/ (providers, persistence, research)"]
+    kernel --> ports["ports/ (Protocols)"]
+    ports --> domain["domain/ (pure data)"]
+    adapters --> ports
+    startup["startup/ (workspace loader)"] --> domain
+    bootstrap["bootstrap.py (composition root)"] -. wires adapters into ports .-> adapters
 ```
 
-| Layer | Location | Responsibility |
-|-------|----------|----------------|
-| Domain | [watchtower/startup/models.py](watchtower/startup/models.py), [enums.py](watchtower/startup/enums.py) | Pure, immutable business entities. No dependencies. |
-| Workspace | [watchtower/startup/workspace.py](watchtower/startup/workspace.py) | Read local files into domain objects; boundary validation. |
-| Ports (services) | [watchtower/tools/research.py](watchtower/tools/research.py), [watchtower/agents/decision.py](watchtower/agents/decision.py) | `Protocol` interfaces + LLM-free placeholder implementations. |
-| Orchestration | [watchtower/graphs/morning.py](watchtower/graphs/morning.py) | Wire loader + services into a routine; return a report. |
-| Presentation | [watchtower/cli/dashboard.py](watchtower/cli/dashboard.py) | Render a report to the terminal with Rich. |
-| CLI | [watchtower/cli/app.py](watchtower/cli/app.py) | Parse commands, construct dependencies, handle errors. |
-| Cognition | [watchtower/cognition.py](watchtower/cognition.py) | The dialogue engine: one reasoning turn per founder message. |
-| Inquiry | [watchtower/inquiry.py](watchtower/inquiry.py) | Conversational state for a single clarification, so dialogue converges. |
-| Beliefs | [watchtower/beliefs/](watchtower/beliefs) | Watchtower's evolving worldview: conclusions distilled from conversations, stored separately behind `BeliefStore`. |
-| Decisions | [watchtower/decisions/](watchtower/decisions) | What the founder actually chose to do, why, and whether it was right — stored behind `DecisionStore`, independent of beliefs. |
-| Support | [watchtower/config.py](watchtower/config.py), [watchtower/llm.py](watchtower/llm.py) | YAML config and a provider-agnostic LLM factory. |
+Dependencies point **inward**: every arrow ends at a ring that knows nothing
+about the ring it came from. `adapters` implement `ports`; `bootstrap` is the one
+place that constructs concrete adapters and wires them to the ports the kernel
+consumes.
 
-The key invariant: **the domain never imports outward**. LangGraph, an LLM
-client, or a persistence engine can be introduced at the outer layers without
-touching the domain.
+### Rings and ownership
+
+| Ring | Path | Own / Rent | Responsibility |
+|------|------|-----------|----------------|
+| 0 — Domain | [domain/](watchtower/domain) | **OWN** | Pure, immutable data (stdlib only): beliefs, decisions, inquiry, judgment, messages. |
+| 1 — Ports | [ports/](watchtower/ports) | **OWN** | `Protocol` seams: `Oracle`, `BeliefStore`/`DecisionStore`, `ResearchProvider`, `Clock`, `ContextProvider`. Import domain only. |
+| 2 — Kernel | [kernel/](watchtower/kernel) | **OWN** | The intellectual property: single-pass reasoning, belief revision, decision ledger, inquiry convergence, and the system prompt. Imports domain + ports only. |
+| 3 — Adapters | [adapters/](watchtower/adapters) | **RENT** | Replaceable implementations: LLM providers, JSON persistence, research. Implement ports. |
+| 3 — Session | [session/](watchtower/session) | **OWN discipline** | Orchestration: the reasoning REPL and the end-of-session fold. Imports kernel + ports. |
+| 4 — Interface | [interface/](watchtower/interface) | **RENT** | Human surface: the Typer CLI and Rich rendering. |
+| — Workspace | [startup/](watchtower/startup) | **OWN schema** | Load a founder's local files into pure domain values. Imports domain only. |
+| — Composition | [bootstrap.py](watchtower/bootstrap.py) | **OWN** | The only module that constructs concrete adapters and wires them to ports. |
+
+### Final package tree
+
+```
+watchtower/
+  domain/        beliefs · decisions · inquiry · judgment · messages
+  ports/         oracle · stores · research · clock · context
+  kernel/        reasoning · inquiry · prompt
+    worldview/   revision · relevance · consolidation
+    ledger/      capture · review · events
+  adapters/
+    providers/   openai · ollama · anthropic · gemini · factory · _retry · limits · _json · errors
+    persistence/ json_beliefs · json_decisions · trajectory
+    research/    gpt_researcher · placeholder · models
+  session/       repl · fold
+  interface/     cli · render · beliefs_view · decisions_view
+  startup/       models · enums · workspace (loader)
+  bootstrap.py   config.py   __main__.py
+```
+
+The key invariant: **inner rings never import outward**. It is enforced
+automatically by [tests/test_architecture.py](tests/test_architecture.py) — the
+kernel may not import an adapter, a provider SDK, a web/DB framework, a YAML
+loader, or a UI toolkit, at import time or transitively — and that test is a
+required CI check ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
 ### The belief engine
 

@@ -1,8 +1,9 @@
 """Persistence for beliefs, behind a storage-agnostic abstraction.
 
-The belief engine depends on the :class:`BeliefStore` protocol, never on a
-concrete backend. :class:`JsonBeliefStore` is the initial local implementation;
-future ones may use SQLite or Postgres without changing any caller.
+The belief engine depends on the :class:`~watchtower.ports.stores.BeliefStore`
+protocol, never on a concrete backend. :class:`JsonBeliefStore` is the initial
+local implementation; future ones may use SQLite or Postgres without changing
+any caller.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 
 from watchtower.domain.beliefs import (
     Belief,
@@ -20,30 +21,6 @@ from watchtower.domain.beliefs import (
     BeliefStatus,
     BeliefUpdate,
 )
-
-
-class BeliefStore(Protocol):
-    """Storage-agnostic persistence for beliefs and their change log."""
-
-    def all(self) -> tuple[Belief, ...]:
-        """Return every belief, in any state."""
-        ...
-
-    def get(self, belief_id: str) -> Belief | None:
-        """Return the belief with ``belief_id`` if it exists."""
-        ...
-
-    def upsert(self, belief: Belief) -> None:
-        """Insert or replace ``belief`` by id."""
-        ...
-
-    def record(self, update: BeliefUpdate) -> None:
-        """Append ``update`` to the append-only change log."""
-        ...
-
-    def history(self) -> tuple[BeliefUpdate, ...]:
-        """Return the change log, oldest first."""
-        ...
 
 
 class JsonBeliefStore:

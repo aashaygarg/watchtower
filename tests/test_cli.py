@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 from watchtower import __version__
-from watchtower.cli import app
+from watchtower.interface import app
 
 runner = CliRunner()
 

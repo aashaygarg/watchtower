@@ -6,8 +6,7 @@ import importlib.util
 from pathlib import Path
 
 import pytest
-from watchtower.startup.workspace import StartupWorkspace, load_workspace
-from watchtower.tools.research import (
+from watchtower.adapters.research import (
     GPTResearcherRunner,
     GPTResearchService,
     PlaceholderResearchService,
@@ -18,6 +17,8 @@ from watchtower.tools.research import (
     SourceKind,
     build_research_query,
 )
+from watchtower.startup.models import StartupWorkspace
+from watchtower.startup.workspace import load_workspace
 
 
 def _workspace(root: Path) -> StartupWorkspace:

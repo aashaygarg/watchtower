@@ -13,7 +13,7 @@ from watchtower.decisions.engine import (
     record_review,
     review_decision,
 )
-from watchtower.decisions.store import DecisionStore, JsonDecisionStore
+from watchtower.decisions.store import JsonDecisionStore
 from watchtower.domain.decisions import (
     Decision,
     DecisionEvent,
@@ -28,7 +28,6 @@ __all__ = [
     "DecisionEventKind",
     "DecisionReview",
     "DecisionStatus",
-    "DecisionStore",
     "JsonDecisionStore",
     "capture_decisions",
     "mark_completed",

@@ -1,198 +1,34 @@
-"""Research service: port, placeholder, and GPT-Researcher implementation.
+"""GPT-Researcher-backed research provider.
 
-The research service gathers external context relevant to the startup's open
-questions. :class:`GPTResearchService` wraps **GPT-Researcher** to produce
-structured findings from the workspace context; :class:`PlaceholderResearchService`
-returns deterministic, LLM-free mock data and doubles as the graceful-degradation
-fallback when GPT-Researcher is unavailable.
-
-Callers depend on the :class:`ResearchService` protocol, never on a concrete
-class, so implementations can be swapped without changes upstream.
+:class:`GPTResearchService` builds a research query from the workspace context,
+runs GPT-Researcher via an injectable :class:`ResearchRunner`, and maps the
+result into a structured :class:`ResearchBriefing`. GPT-Researcher and its API
+keys are optional; if a run is unavailable or fails, the service degrades
+gracefully to a fallback provider.
 """
 
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 from datetime import datetime
-from enum import StrEnum
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
+from watchtower.adapters.research.models import (
+    CompetitorUpdate,
+    MarketChange,
+    RawResearch,
+    ResearchBriefing,
+    ResearchFinding,
+    ResearchSource,
+    ScientificPaper,
+    SourceKind,
+)
+from watchtower.adapters.research.placeholder import PlaceholderResearchService
 from watchtower.startup.enums import EvidenceSource
-from watchtower.startup.models import Evidence, EvidenceId, HypothesisId
-from watchtower.startup.workspace import StartupWorkspace
+from watchtower.startup.models import Evidence, EvidenceId, StartupWorkspace
 
-
-@dataclass(frozen=True, slots=True)
-class ResearchFinding:
-    """A single unit of research output.
-
-    Attributes:
-        topic: The question or theme the finding addresses.
-        summary: A short synthesis of what was learned.
-        key_points: Notable bullet points supporting the summary.
-        sources: Human-readable references the finding draws on.
-        related_hypothesis_id: The hypothesis this finding informs, if any.
-    """
-
-    topic: str
-    summary: str
-    key_points: tuple[str, ...] = ()
-    sources: tuple[str, ...] = ()
-    related_hypothesis_id: HypothesisId | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class CompetitorUpdate:
-    """A relevant update about a competitor.
-
-    Attributes:
-        name: The competitor's name (or the source title).
-        summary: What changed and why it matters.
-        url: A link to the source, if available.
-    """
-
-    name: str
-    summary: str = ""
-    url: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class ScientificPaper:
-    """An important scientific paper surfaced by research.
-
-    Attributes:
-        title: The paper title.
-        summary: A short synthesis of the paper's relevance.
-        url: A link to the paper, if available.
-    """
-
-    title: str
-    summary: str = ""
-    url: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class MarketChange:
-    """A notable change in the market.
-
-    Attributes:
-        summary: What changed and why it matters.
-        url: A link to the source, if available.
-    """
-
-    summary: str
-    url: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class ResearchBriefing:
-    """The full set of findings produced for one morning routine.
-
-    Attributes:
-        findings: The individual research findings.
-        generated_at: When the briefing was produced, if recorded.
-        is_placeholder: ``True`` when the briefing is mock data rather than the
-            output of a real research run.
-        new_evidence: New evidence surfaced by the research.
-        competitor_updates: Relevant competitor updates.
-        scientific_papers: Important scientific papers.
-        market_changes: Notable market changes.
-        confidence: Overall confidence score for the briefing, from 0.0 to 1.0.
-    """
-
-    findings: tuple[ResearchFinding, ...] = ()
-    generated_at: datetime | None = None
-    is_placeholder: bool = True
-    new_evidence: tuple[Evidence, ...] = ()
-    competitor_updates: tuple[CompetitorUpdate, ...] = ()
-    scientific_papers: tuple[ScientificPaper, ...] = ()
-    market_changes: tuple[MarketChange, ...] = ()
-    confidence: float = 0.0
-
-
-class ResearchService(Protocol):
-    """Port for producing a research briefing from a workspace."""
-
-    def investigate(self, workspace: StartupWorkspace) -> ResearchBriefing:
-        """Return a research briefing for the given ``workspace``."""
-        ...
-
-
-class PlaceholderResearchService:
-    """Deterministic, LLM-free stand-in for the real research service.
-
-    Produces one mock finding per hypothesis so downstream stages and the
-    dashboard have realistic-looking data to work with.
-    """
-
-    def investigate(self, workspace: StartupWorkspace) -> ResearchBriefing:
-        findings = tuple(
-            ResearchFinding(
-                topic=hypothesis.statement,
-                summary=(
-                    "Placeholder desk research into this assumption. Signals are "
-                    "mixed but broadly consistent with the current stance."
-                ),
-                key_points=(
-                    f"Prior confidence stands at {hypothesis.confidence:.0%}.",
-                    "Two comparable companies report similar demand patterns.",
-                    "No blocking counter-evidence surfaced in this placeholder pass.",
-                ),
-                sources=(
-                    "Industry landscape report (placeholder)",
-                    "Competitor teardown (placeholder)",
-                ),
-                related_hypothesis_id=hypothesis.id,
-            )
-            for hypothesis in workspace.hypotheses
-        )
-        return ResearchBriefing(
-            findings=findings,
-            generated_at=datetime.now(),
-            is_placeholder=True,
-        )
-
-
-class SourceKind(StrEnum):
-    """Classification of a research source."""
-
-    COMPETITOR = "competitor"
-    PAPER = "paper"
-    MARKET = "market"
-    OTHER = "other"
-
-
-@dataclass(frozen=True, slots=True)
-class ResearchSource:
-    """A single classified source returned by a research run.
-
-    Attributes:
-        title: The source title.
-        url: The source URL, if any.
-        snippet: A short excerpt of the source content.
-        kind: How the source has been classified.
-    """
-
-    title: str
-    url: str | None = None
-    snippet: str = ""
-    kind: SourceKind = SourceKind.OTHER
-
-
-@dataclass(frozen=True, slots=True)
-class RawResearch:
-    """The raw result of a research run, before mapping to a briefing.
-
-    Attributes:
-        summary: A short synthesis of the research.
-        sources: The classified sources gathered.
-        confidence: An overall confidence score from 0.0 to 1.0.
-    """
-
-    summary: str = ""
-    sources: tuple[ResearchSource, ...] = ()
-    confidence: float = 0.5
+if TYPE_CHECKING:
+    from watchtower.ports.research import ResearchProvider
 
 
 class ResearchUnavailableError(RuntimeError):
@@ -240,14 +76,14 @@ class GPTResearchService:
     an injectable :class:`ResearchRunner`, and maps the result into a structured
     :class:`ResearchBriefing`. If the runner is unavailable or fails for any
     reason, it degrades gracefully to ``fallback`` (the placeholder service by
-    default), so ``watchtower morning`` always produces a briefing.
+    default).
     """
 
     def __init__(
         self,
         *,
         runner: ResearchRunner | None = None,
-        fallback: ResearchService | None = None,
+        fallback: ResearchProvider | None = None,
     ) -> None:
         self._runner = runner or GPTResearcherRunner()
         self._fallback = fallback or PlaceholderResearchService()

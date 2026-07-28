@@ -10,8 +10,15 @@ that depends only on the standard library and other domain types.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from watchtower.domain.inquiry import Inquiry
+
+#: The uncertainty stated when a turn is degraded because the oracle was unreachable.
+_DEGRADED_UNCERTAINTY = (
+    "Watchtower could not reach its reasoning model, so this turn is degraded: "
+    "no recommendation is offered."
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,3 +93,21 @@ class ThinkingResult:
     experiments: tuple[Experiment, ...] = ()
     inquiries: tuple[Inquiry, ...] = ()
     resolved_inquiry_id: str | None = None
+
+    @classmethod
+    def degraded(cls, problem: str) -> ThinkingResult:
+        """A minimal, honest judgment for a turn where the oracle was unreachable.
+
+        It carries no recommendation and states its uncertainty plainly, so a
+        provider failure degrades the turn instead of crashing the dialogue.
+        """
+        return cls(problem=problem, biggest_uncertainty=_DEGRADED_UNCERTAINTY)
+
+
+def degraded_payload() -> dict[str, Any]:
+    """The JSON an oracle yields on total failure, so its callers degrade gracefully.
+
+    Parsed by the reasoning kernel it reconstructs :meth:`ThinkingResult.degraded`;
+    the belief- and decision-engines simply find nothing to act on.
+    """
+    return {"biggest_uncertainty": _DEGRADED_UNCERTAINTY}

@@ -10,14 +10,13 @@ from typing import Any
 
 import pytest
 from rich.console import Console
-from watchtower.cli.conversation import render_thinking
-from watchtower.cognition import think
+from watchtower.adapters.providers import LLMUnavailableError, build_oracle
 from watchtower.config import LLMConfig
 from watchtower.domain.judgment import ConfidenceReason, Experiment, ThinkingResult
 from watchtower.domain.messages import Message
-from watchtower.llm import LLMUnavailableError, build_llm
-from watchtower.startup.models import Startup, StartupId
-from watchtower.startup.workspace import StartupWorkspace
+from watchtower.interface.render import render_thinking
+from watchtower.kernel.reasoning import think
+from watchtower.startup.models import Startup, StartupId, StartupWorkspace
 
 
 def _workspace() -> StartupWorkspace:
@@ -198,10 +197,10 @@ def test_render_recommendation_smoke() -> None:
 def test_build_llm_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     with pytest.raises(LLMUnavailableError):
-        build_llm(LLMConfig())
+        build_oracle(LLMConfig())
 
 
 def test_build_llm_with_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-used")
-    llm = build_llm(LLMConfig())
+    llm = build_oracle(LLMConfig())
     assert hasattr(llm, "complete_json")

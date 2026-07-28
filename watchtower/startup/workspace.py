@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -49,6 +48,7 @@ from watchtower.startup.models import (
     HypothesisId,
     Startup,
     StartupId,
+    StartupWorkspace,
     Strategy,
     StrategyId,
 )
@@ -56,31 +56,6 @@ from watchtower.startup.models import (
 
 class WorkspaceError(Exception):
     """Raised when a startup workspace cannot be found, read, or parsed."""
-
-
-@dataclass(frozen=True, slots=True)
-class StartupWorkspace:
-    """The founder's context loaded from a workspace directory.
-
-    Attributes:
-        root: The directory the workspace was loaded from.
-        startup: The :class:`Startup` synthesized from ``vision.md``.
-        vision: The full, unmodified text of ``vision.md``.
-        goals: The goals parsed from ``goals.yaml``.
-        strategies: The strategies parsed from ``strategies.yaml``.
-        hypotheses: The hypotheses parsed from ``hypotheses.yaml``.
-        experiments: The experiments parsed from ``experiments.yaml``.
-        decisions: The decisions parsed from ``decisions.yaml``.
-    """
-
-    root: Path
-    startup: Startup
-    vision: str
-    goals: tuple[Goal, ...] = ()
-    strategies: tuple[Strategy, ...] = ()
-    hypotheses: tuple[Hypothesis, ...] = ()
-    experiments: tuple[Experiment, ...] = ()
-    decisions: tuple[Decision, ...] = ()
 
 
 def load_workspace(path: str | Path) -> StartupWorkspace:

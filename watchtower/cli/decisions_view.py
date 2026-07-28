@@ -9,9 +9,8 @@ from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-
-from watchtower.decisions.store import DecisionStore
 from watchtower.domain.decisions import Decision, DecisionReview, DecisionStatus
+from watchtower.ports.stores import DecisionStore
 
 _ACTIVE = (DecisionStatus.PROPOSED, DecisionStatus.ACCEPTED)
 

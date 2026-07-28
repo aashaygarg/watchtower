@@ -14,7 +14,6 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from watchtower.decisions.store import DecisionStore
 from watchtower.domain.beliefs import Belief
 from watchtower.domain.decisions import (
     Decision,
@@ -25,6 +24,7 @@ from watchtower.domain.decisions import (
 )
 from watchtower.domain.messages import system, user
 from watchtower.ports.oracle import Oracle
+from watchtower.ports.stores import DecisionStore
 
 # --------------------------------------------------------------------------- #
 # Explicit capture

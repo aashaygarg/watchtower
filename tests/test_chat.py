@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
-from watchtower.cli import app
+from watchtower.interface import app
 
 runner = CliRunner()
 
