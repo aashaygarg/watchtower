@@ -11,7 +11,7 @@ driven from the terminal.
 - **Python 3.13**
 - **[uv](https://docs.astral.sh/uv/)** for dependency management
 - **[LangGraph](https://langchain-ai.github.io/langgraph/)** for agent orchestration
-- **OpenAI-compatible LLM interface** (`watchtower/llm.py`)
+- **OpenAI-compatible LLM interface** (`watchtower/adapters/providers/`)
 - **[Typer](https://typer.tiangolo.com/)** for the CLI
 - **[Rich](https://rich.readthedocs.io/)** for terminal output
 - **YAML** configuration

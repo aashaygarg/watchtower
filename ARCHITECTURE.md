@@ -77,7 +77,7 @@ required CI check ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 ### The belief engine
 
 Watchtower does not remember conversations — it remembers **conclusions**. Each
-conversation is evidence; a second reasoning step ([beliefs/engine.py](watchtower/beliefs/engine.py))
+conversation is evidence; a second reasoning step ([kernel/worldview/revision.py](watchtower/kernel/worldview/revision.py))
 turns that evidence into worldview updates (create / strengthen / weaken /
 supersede / disprove / no-change, each with a rationale). Beliefs live behind a
 storage-agnostic `BeliefStore` (JSON today; SQLite/Postgres later) and are never
@@ -91,7 +91,7 @@ agents, and long-term conversation memory.
 
 Beliefs describe what Watchtower *thinks*; decisions describe what the founder
 *chose to do* — a separate concept. A decision is captured
-([decisions/engine.py](watchtower/decisions/engine.py)) only when the founder
+([kernel/ledger/capture.py](watchtower/kernel/ledger/capture.py)) only when the founder
 **explicitly commits** to an action; it is never inferred from a recommendation.
 Decisions link the beliefs that supported them (by id) but **never mutate
 beliefs**, so the belief engine is untouched. They live behind a `DecisionStore`
@@ -212,7 +212,7 @@ sequenceDiagram
 | Orchestration | `MorningRoutine` constructor injection | A compiled LangGraph graph. |
 | Memory | `MemoryStore` protocol ([memory/store.py](watchtower/memory/store.py)) | mem0 / Graphiti-backed store. |
 | Tools | [watchtower/tools/registry.py](watchtower/tools/registry.py) | Registered agent-callable tools. |
-| LLM | [watchtower/llm.py](watchtower/llm.py) | Any OpenAI-compatible endpoint via config. |
+| LLM | [watchtower/adapters/providers/factory.py](watchtower/adapters/providers/factory.py) | Any OpenAI-compatible endpoint via config. |
 
 **Adding a new workspace entity** involves: (1) adding/using a domain model in
 [models.py](watchtower/startup/models.py), (2) a `_parse_*` function and a field
